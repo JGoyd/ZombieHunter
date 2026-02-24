@@ -19,7 +19,7 @@ The proximity of these IPs to the **ExclaveOS** symbols (e.g., `ExclaveKitProxy`
 
 #### **Automated Verification Script**
 
-Attached to this supplemental update is the **Attribution_Script.py**. This tool is provided to allow for programmatic reproduction of the "Zombie Cache" findings.
+Attached to this supplemental update is the **zombie_auditor.py**. This tool is provided to allow for programmatic reproduction of the "Zombie Cache" findings.
 
 The script performs the following validation checks:
 
