@@ -3,6 +3,7 @@
 
 **Target Artifact:** `168CADF663A7397F9E9D2CE113F33C6C` 
 
+**Field Extracted Implant Implant** [Google Drive](https://drive.google.com/file/d/1rYNGtKBMb34FQT4zLExI51sdAYRES6iN/view)
 #### **Operational Infrastructure (C2 Anchors)**
 
 Forensic analysis of the shadow runtime initialization blocks has confirmed the following terminating infrastructure nodes. These IPs are hardcoded within the binary at offset `0x794bd` and serve as the functional anchors for the hardware-isolated exfiltration circuit:
