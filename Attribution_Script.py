@@ -14,7 +14,7 @@ def load_c2_config(config_path='c2_actors.json'):
     except:
         return default
 
-def audit_single_dsc(file_path, anchors, DART_OVERFLOW):
+def audit_single_binary(file_path, anchors, DART_OVERFLOW):
     print(f"\n--- {os.path.basename(file_path)} ---")
     hits = 0
     
@@ -43,6 +43,27 @@ def audit_single_dsc(file_path, anchors, DART_OVERFLOW):
         print(f"[ERROR] {e}")
         return 0
 
+def find_dsc_binaries(root_path):
+    """Aggressive search for ANY binary in ANY dsc/ folder"""
+    binaries = []
+    
+    # Pattern 1: system_logs.logarchive/dsc/* (your structure)
+    pattern1 = os.path.join(root_path, "**", "system_logs.logarchive", "dsc", "*")
+    binaries.extend(glob.glob(pattern1, recursive=True))
+    
+    # Pattern 2: os_logarchive/DSC/* (alternate)
+    pattern2 = os.path.join(root_path, "**", "os_logarchive", "DSC", "*")
+    binaries.extend(glob.glob(pattern2, recursive=True))
+    
+    # Pattern 3: ANY dsc/ folder containing binaries (universal)
+    pattern3 = os.path.join(root_path, "**", "dsc", "*")
+    binaries.extend(glob.glob(pattern3, recursive=True))
+    
+    # Filter to likely binaries (not .txt, .log, etc.)
+    binary_files = [f for f in binaries if not f.lower().endswith(('.txt', '.log', '.plist', '.json'))]
+    
+    return list(set(binary_files))  # Dedupe
+
 def extract_and_scan_tar(tar_path, anchors, DART_OVERFLOW):
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -50,23 +71,25 @@ def extract_and_scan_tar(tar_path, anchors, DART_OVERFLOW):
             with tarfile.open(tar_path, 'r:gz') as tar:
                 tar.extractall(temp_dir)
             
-            # Primary DSC path
-            dsc_pattern = os.path.join(temp_dir, "**", "os_logarchive", "**", "DSC", "**", "*.dsc")
-            dsc_files = glob.glob(dsc_pattern, recursive=True)
+            # Find your DSC binaries
+            binaries = find_dsc_binaries(temp_dir)
             
-            # Fallback paths
-            if not dsc_files:
-                print("[INFO] Primary path empty, scanning all .dsc files...")
-                dsc_files = glob.glob(os.path.join(temp_dir, "**", "*.dsc"), recursive=True)
+            if not binaries:
+                print("[WARNING] No binaries found in dsc/ folders. Listing logarchive contents...")
+                # Debug: show all logarchive paths
+                logarchives = glob.glob(os.path.join(temp_dir, "**", "logarchive", "*"), recursive=True)
+                for la in logarchives[:10]:  # Top 10
+                    print(f"  Found: {la}")
+                return 0
             
-            print(f"[INFO] Found {len(dsc_files)} DSC files")
+            print(f"[INFO] Found {len(binaries)} potential DSC binaries")
             
             total_hits = 0
-            for dsc_file in dsc_files:
-                hits = audit_single_dsc(dsc_file, anchors, DART_OVERFLOW)
+            for binary_file in binaries:
+                hits = audit_single_binary(binary_file, anchors, DART_OVERFLOW)
                 total_hits += hits
             
-            print(f"\n=== SUMMARY ===\n{total_hits} total hits across {len(dsc_files)} files")
+            print(f"\n=== SUMMARY ===\n{total_hits} total hits across {len(binaries)} binaries")
             return total_hits
             
     except FileNotFoundError:
@@ -77,7 +100,7 @@ def extract_and_scan_tar(tar_path, anchors, DART_OVERFLOW):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="iOS DSC Zombie Cache Auditor")
+    parser = argparse.ArgumentParser(description="iOS DSC Binary Auditor")
     parser.add_argument("sysdiagnose", help="Path to your sysdiagnose tar.gz")
     parser.add_argument("--config", default="c2_actors.json", help="Optional C2 config")
     args = parser.parse_args()
@@ -85,12 +108,12 @@ def main():
     anchors = load_c2_config(args.config)
     DART_OVERFLOW = 1685283688
     
-    print("🚨 Personal iOS Zombie Cache Auditor 🚨")
+    print("🚨 iOS DSC Binary Forensic Auditor 🚨")
     print(f"Target: {args.sysdiagnose}\n")
     
     if os.path.isdir(args.sysdiagnose):
-        dsc_files = glob.glob(os.path.join(args.sysdiagnose, "**", "os_logarchive", "**", "DSC", "**", "*.dsc"), recursive=True)
-        total_hits = sum(audit_single_dsc(f, anchors, DART_OVERFLOW) for f in dsc_files)
+        binaries = find_dsc_binaries(args.sysdiagnose)
+        total_hits = sum(audit_single_binary(f, anchors, DART_OVERFLOW) for f in binaries)
     else:
         total_hits = extract_and_scan_tar(args.sysdiagnose, anchors, DART_OVERFLOW)
     
