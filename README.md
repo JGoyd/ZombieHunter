@@ -1,15 +1,21 @@
 # ZombieHunter - iOS dyld_shared_cache Exploitation Auditor
 
+## Multi-Geography C2 Confirmed
+
+**Device-specific C2 adaptation detected** - same exploit template, different regional endpoints:
+
+| Device Location | C2 Anchor (0x794bd) | Geography |
+|-----------------|-------------------|-----------|
+| **US Device 1** | `83.116.114.97` | Europe/US |
+| **US Device2** | `101.99.111.110` | China |
+
+
+
+
 ## What This Tool Detects
 
-**Live exploitation artifacts** from **CVE-2026-20700** (dyld memory corruption vulnerability) discovered in production iOS 26.3 sysdiagnose archives. Detects rogue dyld_shared_cache slices exhibiting **active bypass** of Apple's patched zero-day:
+Live exploitation of **CVE-2026-20700** (dyld memory corruption) with **regionally adaptive C2** discovered in production iOS 26.3 sysdiagnose archives. Detects rogue dyld_shared_cache slices exhibiting **active bypass** of Apple's patched zero-day:
 
-```
-Mappings Count: 301,240 → Overflow Trigger Confirmed  
-BL Proof → bl #0x15cd at offset 0x15cd
-C2 Anchor → 83.116.114.97 (offset 0x794bd)
-AMFI Bypass → DYLD_AMFI_FAKE at 0x532e9
-```
 
 **Target Location**: `/system_logs.logarchive/dsc/[32-char UUID]`
 
@@ -65,7 +71,7 @@ Mappings Count: 301,240 -> Overflow Trigger Confirmed
 BL Proof -> bl #0x15cd at offset 0x15cd
   HEX: 940015CD -> 0x94000000 pattern
   ASM: bl #0x15cd
-C2 Anchor -> 83.116.114.97 (offset 0x794bd)
+C2 Anchor ->  (offset 0x794bd)
 AMFI Bypass -> DYLD_AMFI_FAKE at 0x532e9
 
 DISCLOSURE READY
