@@ -4,11 +4,11 @@
 
 **Device-specific C2 adaptation detected** - same exploit template, different regional endpoints:
 
-| Device Location | C2 Anchor (0x794bd) | Geography |
-|-----------------|-------------------|-----------|
-| **US Device 1** | `83.116.114.97` | Europe/US |
-| **US Device2** | `101.99.111.110` | China |
-
+| IP              | ISP/Organization         | Country     | Exploit Sample |
+|-----------------|--------------------------|-------------|----------------|
+| `83.116.114.97` | **AWS A100 ROW GmbH**   | **Germany (US-owned)** | **Exploit #1** |
+| `101.99.111.110`| **China Telecom**       | **China**   | **Exploit #2** |
+| `116.68.105.115`| **Asianet Satellite**   | **India**   | **Exploit #3** |
 
 
 
@@ -74,7 +74,6 @@ BL Proof -> bl #0x15cd at offset 0x15cd
 C2 Anchor ->  (offset 0x794bd)
 AMFI Bypass -> DYLD_AMFI_FAKE at 0x532e9
 
-DISCLOSURE READY
 ```
 
 ## Test with Confirmed Sample
