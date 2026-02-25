@@ -101,7 +101,6 @@ python3 zombie_auditor.py rogue-slice.dat  # Should match above output
 ```
 
 ## Community Reporting
-- **Positive detection**: Open Issue with script output 
-- **New IOCs**: Pull Request with offsets/strings
+- **Positive detection/New IOCs**: Open Issue with script output
 
 ***
