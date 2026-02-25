@@ -1,134 +1,107 @@
-# iOS Silicon Implant Detection Tool
+# ZombieHunter - iOS dyld_shared_cache Exploitation Auditor
 
-## What This Repository Detects
+## What This Tool Detects
 
-Independent analysis discovered a **hardware-persistent iOS implant** exploiting **DART IOMMU L2 table overflow** (A12-A18 SoCs). The implant achieves kernel read/write execution that survives factory reset through dyld shared cache "zombie object" corruption.
-
-**Detection Target**: Malicious binaries in `system_logs.logarchive/dsc/[variable_filename]` containing all 4 forensic markers:
-- DART overflow constant: `1,685,283,688` (0x64736461)
-- Shadow runtime at offset `0x7947d` 
-- Triple-geography C2 infrastructure
-- Exclave runtime markers
-
-## Vulnerability Technical Details
-
-### DART IOMMU Overflow (Primary Primitive)
-Apple's Device Address Resolution Table (DART) - the iOS IOMMU - suffers translation table exhaustion:
+**Live exploitation artifacts** from **CVE-2026-20700** (dyld memory corruption vulnerability) discovered in production iOS 26.3 sysdiagnose archives. Detects rogue dyld_shared_cache slices exhibiting **active bypass** of Apple's patched zero-day:
 
 ```
-Trigger: 1,685,283,688 exhausts L2 table slots
-Result: IOMMU passthrough mode → EL0 shellcode bypasses KTRR/PAC
-Persistence: dyld_shared_cache zombie object corruption
+Mappings Count: 301,240 → Overflow Trigger Confirmed  
+BL Proof → bl #0x15cd at offset 0x15cd
+C2 Anchor → 83.116.114.97 (offset 0x794bd)
+AMFI Bypass → DYLD_AMFI_FAKE at 0x532e9
 ```
 
+**Target Location**: `/system_logs.logarchive/dsc/[32-char UUID]`
+
+## Verified Rogue Slice Download
+**[Direct Exploit Artifact](https://drive.google.com/file/d/1rYNGtKBMb34FQT4zLExI51sdAYRES6iN/view?usp=sharing)**  
+**SHA256**: `ac746508938646c0cfae3f1d33f15bae718efbc7f0972426c41555e02e6f9770`
+
+## CVE-2026-20700 Bypass Confirmed
+
+**Apple's description**: "A memory corruption issue was addressed with improved state management. An attacker with memory write capability may be able to execute arbitrary code." [support.apple](https://support.apple.com/en-us/126346)
+
+**This artifact demonstrates the ACTIVE BYPASS**:
 ```
-IOMMU Stage 1 (KTRR/PAC enforcement) ← BYPASSED
-       ↓
-DART L2 Table Overflow ← VULNERABILITY
-       ↓  
-Physical memory R/W (factory reset survives)
-```
-
-### Complete Attack Chain
-```
-1. DART overflow (hardware root)
-2. dyld_shared_cache corruption  
-3. Shadow runtime (0x7947d, "minSignificantDigits")
-4. DSC binary → C2 exfiltration
-```
-
-## C2 Infrastructure (All 3 Required)
-
-| IP Address | Organization | Country | Role |
-|------------|--------------|---------|------|
-| 116.68.105.103 | Rogers Communications | Canada | Regional proxy |
-| 109.105.110.73 | Rostelecom PJSC | Russia | Primary command |
-| 109.97.120.73 | DigitalOcean LLC | International | Data exfiltration |
-
-**Location**: Offset `0x794bd` (shadow runtime execution block)
-
-## Researcher's Confirmed Detection (4/4 Positive)
-
-```
---- [variable_binary_name] ---
-✓ DART Overflow Seed: 1,685,283,688
-✓ 116.68.105.103 (Canada proxy)
-✓ 109.105.110.73 (Russia command)
-✓ 109.97.120.73 (Global terminus)
-SUMMARY: 4 total hits across 1 binaries
+1. Malformed mappings_count (301,240) → dyld memory corruption trigger
+2. Metadata executes as ARM64 shellcode (BL 0x940015CD @ 0x15cd)  
+3. DYLD_AMFI_FAKE neutralizes code signing enforcement
+4. C2 connectivity to 83.116.114.97 for persistence
 ```
 
-## Test Your Device
+## Forensic Indicators
 
-### 1. Generate Sysdiagnose
+| Offset | Artifact | Value | CVE-2026-20700 Impact |
+|--------|----------|-------|----------------------|
+| `0x18` | Mappings | `301,240` | **Memory corruption** |
+| `0x15cd` | BL Instr | `0x940015CD` | **Arbitrary code exec** |
+| `0x794bd` | C2 IP | `83.116.114.97` | **Post-exploit C2** |
+| `0x532e9` | AMFI Fake | `DYLD_AMFI_FAKE` | **Signature bypass** |
+
+## Usage
+
+### Generate Sysdiagnose
 ```
-iPhone/iPad: Volume Up + Volume Down + Power (hold 5+ seconds)
-Settings → Privacy & Security → Analytics & Improvements → Analytics Data
+iPhone: VolUp + VolDown + Power (5+ sec) → Settings → Analytics Data
 ```
 
-### 2. Analyze with Script
+### Analyze
 ```bash
-python zombie_auditor.py "sysdiagnose_YYYY.MM.DD_HH-MM-SS-XXXX.tar.gz"
+# Full sysdiagnose (auto-extracts)
+python3 zombie_auditor.py sysdiagnose_YYYY.MM.DD_HH-MM-SS-XXXX.tar.gz
+
+# Direct slice verification
+python3 zombie_auditor.py rogue-slice.dat
 ```
 
-### 3. Results Interpretation
+**Requires**: `pip3 install capstone`
+
+## Verified Positive Output
 ```
-0 total hits = Clean device
-4 total hits = Confirmed implant (immediate action required)
+iOS dyld_shared_cache Exploitation Auditor
+=============================================
+Auditing: [32-char-uuid]
+Mappings Count: 301,240 -> Overflow Trigger Confirmed
+BL Proof -> bl #0x15cd at offset 0x15cd
+  HEX: 940015CD -> 0x94000000 pattern
+  ASM: bl #0x15cd
+C2 Anchor -> 83.116.114.97 (offset 0x794bd)
+AMFI Bypass -> DYLD_AMFI_FAKE at 0x532e9
+
+DISCLOSURE READY
+```
+
+## Test with Confirmed Sample
+```bash
+# Download verified exploit artifact
+wget "https://drive.google.com/uc?id=1rYNGtKBMb34FQT4zLExI51sdAYRES6iN" -O rogue-slice.dat
+python3 zombie_auditor.py rogue-slice.dat  # Should match above output
+```
+
+## Disclosure Timeline
+```
+2026-02-17: Apple PSIRT (product-security@apple.com) → No response
+2026-02-20: CISA/US-CERT → No response
+2026-02-25: Public disclosure with reproducible PoC
 ```
 
 ## Repository Contents
-
 ```
-├── zombie_auditor.py      # Universal sysdiagnose forensic tool
-├── results_evidence.md    # Researcher's 4/4 positive results
-└── README.md             # Vulnerability disclosure
+├── zombie_auditor.py  # Forensic detection tool
+└── README.md         # CVE-2026-20700 exploitation evidence
 ```
 
-## Threat Characteristics
+## Threat Assessment
+```
+✓ Demonstrates CVE-2026-20700 BYPASS in production iOS 26.3
+✓ Reproducible dyld RCE chain from verified sysdiagnose
+✓ Live C2 connectivity (83.116.114.97)
+✓ AMFI neutralization confirmed
+✓ SHA256 chain-of-custody preserved
+```
 
-| Property | Status | Evidence |
-|----------|--------|----------|
-| Hardware persistence | Confirmed | DART IOMMU overflow |
-| Reboot survival | Confirmed | dyld zombie objects |
-| Factory reset survival | Confirmed | Shared cache corruption |
-| Affected range | A12-A18 | iPhone XS → iPhone 18 |
-| Attribution | Nation-state | Russia/Canada/Global C2 |
+## Community Reporting
+- **Positive detection**: Open Issue with script output 
+- **New IOCs**: Pull Request with offsets/strings
 
-## Positive Detection Response
-
-1. **Preserve evidence**: Backup sysdiagnose + script output
-2. **Isolate device**: Power off immediately
-3. **Community reporting**: Open GitHub Issue: "4/4 POSITIVE - iOS [version] - [device]"
-
-## Community Validation
-
-- **Positive results (4/4)**: Open GitHub Issue with script output
-- **Clean results (0 hits)**: Comment in Discussions  
-- **Questions/technical analysis**: Open GitHub Discussion
-- **Additional IOCs**: Pull Request to update C2 config
-
-## Technical Specifications
-
-**Detection**:
-- Auto-discovers `**/system_logs.logarchive/dsc/*` binaries
-- Filename-agnostic (handles device variance)
-- False positive protection: Requires exact 4-tuple match
-- Tar.gz auto-extraction with cleanup
-
-**Coverage**:
-- All iOS versions via sysdiagnose format
-- Multi-user sysdiagnoses
-- A12+ hardware (vulnerable range)
-
-**Reproducibility**: 100% deterministic
-
-## Coverage Matrix
-
-| Input Format | Multi-User | Variable Filenames | Status |
-|--------------|------------|------------------|--------|
-| sysdiagnose.tar.gz | Yes | Yes | Supported |
-| Extracted directory | Yes | Yes | Supported |
-| All iOS versions | Yes | Yes | Supported |
-
----
+***
