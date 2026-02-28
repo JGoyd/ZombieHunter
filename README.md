@@ -35,7 +35,7 @@ Live exploitation of **CVE-2026-20700** (dyld memory corruption) with **regional
 4. C2 connectivity to 83.116.114.97 for persistence
 ```
 
-## Forensic Indicators
+## Forensic Indicators (Artifact 1)
 
 | Offset | Artifact | Value | CVE-2026-20700 Impact |
 |--------|----------|-------|----------------------|
