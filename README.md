@@ -2,7 +2,7 @@
 
 ## Multi-Geography C2 Confirmed
 
-**Device-specific C2 adaptation detected** - same exploit template, different regional endpoints:
+**Device-specific IP idetifiers adaptation detected** (continuously updating) - same exploit template, different regional endpoints:
 
 | IP              | ISP/Organization         | Country     | Exploit Sample |
 |-----------------|--------------------------|-------------|----------------|
