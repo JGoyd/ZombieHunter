@@ -50,12 +50,13 @@ the shared C2 confirms a single active campaign.
 |---|---|---|---|---|
 | 2026-02-07 | `23C71` (iOS 26.2.1) | `dsc/5D958D9D5B053C2796AE2A93B895337C` | 3 | `200.152.70.35:443` |
 | 2026-03-03 | `23D127` (iOS 26.3) | `dsc/168CADF663A7397F9E9D2CE113F33C6C` | 2 | `200.152.70.35:443` |
+| 2026-03-06 | `23D8133` (iOS 26.3.1) | `dsc/37552E3873EC310782BB3D424E169A66` | TBD | `200.152.70.35:443` |
 
 UUID rotated post-update. C2 did not. Post-DFU restore on 26.3 confirmed survival.
 
 ### Device 2 — A14: iOS 26.3 → 26.3.1
 
-| Date | Build | Zombie binary | Detection | UUIDs | C2 |
+| Date | Build | Zombie binary | Detection | UUIDs | Primary C2 |
 |---|---|---|---|---|---|
 | 2026-03-03 | `23D127` (iOS 26.3) | `dsc/C4BE5627FAD93C7987A9E75944417538` | UUID | 1 | `200.152.70.35:443` |
 | 2026-03-05 | `23D8133` (iOS 26.3.1) | `dsc/C4BE5627FAD93C7987A9E75944417538` | HASH + UUID | 3 | `200.152.70.35:443` |
@@ -67,18 +68,11 @@ UUID rotated post-update. C2 did not. Post-DFU restore on 26.3 confirmed surviva
 
 ---
 
-## Known IOCs
-
-### C2 Infrastructure
-
-| Indicator | Type | Confidence |
-|---|---|---|
-| `200.152.70.35:443` | Hex-encoded IP, port 443 | HIGH |
-
 ### Confirmed Zombie Binary Hashes (SHA256)
 
 | Hash | Device | Chipset |
 |---|---|---|
+| `d93d48802aa3ccefa74ae09a6a86eafa7554490d884c00b531a9bfe81981fb06` | Device 1 | Apple A16 |
 | `ac746508938646c0cfae3f1d33f15bae718efbc7f0972426c41555e02e6f9770` | Device 1 | Apple A16 |
 | `38a723210c18e81de8f33db79cfe8bae050a98d9d2eacdeb4f35dabbf7bd0cee` | Device 2 | Apple A14 |
 | `869f9771ea1f9b6bf7adbd2663d71dbc041fafcbf68e878542c8639a6ba23066` | Device 2 | Apple A14 |
@@ -88,6 +82,9 @@ will trigger a `HASH_MATCH` detection even if the implant has gone silent in the
 unified logging system.
 
 ---
+
+
+
 
 ## Embedded URLs — Implant Capability Fingerprint
 
@@ -120,6 +117,41 @@ that only appear in a binary if the implant harvested device data (Maps, Safari,
 Wallet) or was operating against a pre-profiled target. The EU COVID Diagnostics JRC URL alongside DICOM
 capability points toward a specific professional context: healthcare, medical device
 regulation, or public health infrastructure.
+
+---
+
+
+## C4 Binary Analysis | Full Reverse Engineering
+
+The `C4BE5627FAD93C7987A9E75944417538` module (Device 2, A14, iOS 26.3) was
+subjected to full static and dynamic reverse engineering. It is a 165.7 MB
+multi-stage dropper concealed behind an `hcsd` CoreSymbolication file
+signature. Ten Mach-O payloads were carved across three functional clusters:
+
+- **GPU & Silicon** — AGX firmware patches achieving raw framebuffer capture
+  below `ScreenCaptureKit` protections and all user-space privacy indicators
+- **Boot Chain & FTAB** — FTAB injection and boot nonce manipulation for
+  persistence that survives DFU restore and factory reset
+- **HID Surveillance** — `StudyLog.framework` hooks intercepting every touch,
+  gesture, and keystroke before application-layer encryption is applied
+
+Five hardcoded endpoints were recovered from the binary's `.data` segment,
+all encoded in Big-Endian hex within raw `sockaddr_in` structures — bypassing
+every string-based detection method:
+
+| IP Address | Role |
+|---|---|
+| `107.195.166.114` | Primary C2 — HID exfiltration via `_ITTouchTranscoderSessionAddEvent` |
+| `136.133.187.184` | Real-time telemetry stream |
+| `207.135.206.181` | System log exfiltration |
+| `246.48.148.156` | Internal IPC — Class E reserved |
+| `244.25.215.0` | Early boot hardware loopback — Class E reserved, active before iOS network stack initializes |
+
+Captured HID data is encrypted with AES-256-GCM using hardware-derived
+runtime keys before transmission. Keys are not stored in the binary and
+are not recoverable through static analysis.
+
+→ [`C4_Binary_Analysis/README.md`](https://github.com/JGoyd/ZombieHunter/tree/main/C4%20Binary%20Analysis)
 
 ---
 
@@ -176,8 +208,11 @@ for static analysis, or submitted to a sandboxed environment for dynamic analysi
 ## Repository
 
 ```
-├── zombie_detection.py   # Forensic detection tool
-└── README.md             # CVE-2026-20700 exploitation evidence
+├── zombie_detection.py        # Forensic detection tool
+├── README.md                  # CVE-2026-20700 exploitation evidence
+└── C4_Binary_Analysis/
+    ├── README.md              # Full reverse engineering report: C4BE5627FAD93C7987A9E75944417538
+    └── Carved_Binaries/       # 10 extracted Mach-O payloads
 ```
 
 ---
@@ -185,7 +220,7 @@ for static analysis, or submitted to a sandboxed environment for dynamic analysi
 ## Threat Assessment
 
 ```
-✓  Zombie dyld slice confirmed on 2 independent devices across 3 iOS builds
+✓  Zombie dyld slice confirmed on 2 independent devices across 4 iOS builds
 ✓  Cross-chipset confirmation: A16 and A14 both affected
 ✓  Exploit survives full DFU restore, no backup, no iCloud, no Wi-Fi
 ✓  Persistence maps to SSV, hardware root-of-trust layer
