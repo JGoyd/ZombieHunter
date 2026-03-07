@@ -29,7 +29,7 @@ Volume (SSV)**: the hardware root-of-trust-sealed, read-only partition at
 remediation path available to a device owner: OTA update, DFU restore, factory
 reset.
 
-> **There is no fix. A confirmed zombie device is permanently compromised at the silicon level.**
+> **There is no fix. A confirmed infected device completley evades detection (until now) and is permanently compromised at the silicon level.**
 
 ---
 
