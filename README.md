@@ -1,7 +1,7 @@
 # ZombieHunter
 ### iOS Silicon Detector
 
-### Stepped-On Silicon — Dirty iPhones Pass the Purity Test
+### Stepped-On Silicon | Dirty iPhones Pass the Purity Test
 
 > Detects unwipeable, silicon-level iOS implants that survive DFU restore.
 > Forensic evidence of CVE-2026-20700 SSV-layer persistence confirmed in the wild.
