@@ -212,7 +212,7 @@ for static analysis, or submitted to a sandboxed environment for dynamic analysi
 ├── README.md                  # CVE-2026-20700 exploitation evidence
 └── C4_Binary_Analysis/
     └── README.md              # Full reverse engineering report: C4BE5627FAD93C7987A9E75944417538
-     
+```     
 
 ---
 
