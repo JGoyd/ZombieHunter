@@ -233,9 +233,4 @@ for static analysis, or submitted to a sandboxed environment for dynamic analysi
 
 ---
 
-## Community Reporting
 
-**Got a detection? Found new IOCs?** Open an Issue with your script output.
-
-Please include your iOS build string, `ZOMBIE_REPORT.txt` contents, and any new
-C2 IPs or UUID patterns observed.
